@@ -6,15 +6,106 @@ import sys
 from dijkstra_angle import Dijkstra
 import matplotlib.pyplot as plt
 import numpy as np
+import random
+
+##############################################################################
+###################################################################
+
+sumoBinary = sumolib.checkBinary('sumo-gui')
+
+traci.start([sumoBinary, "-c", "random_sumo.sumocfg"])
+list_of_vehicles = traci.vehicle.getIDList()
+
+list_of_edges = {}
+rev_edge = {}
+list_of_junctions = {}
+
+i = 0
+j = 0
+
+for edge_id in traci.edge.getIDList():
+  start = traci.edge.getFromJunction(edge_id)
+  end = traci.edge.getToJunction(edge_id)
+
+  if start != end:
+    if edge_id not in list_of_edges:
+      list_of_edges[edge_id] = i
+      rev_edge[i] = edge_id
+      i += 1
+      if start not in list_of_junctions:
+        list_of_junctions[start] = j
+        j += 1
+      if end not in list_of_junctions:
+        list_of_junctions[end] = j
+        j += 1
+
+matrix_l = len(list_of_junctions)
+adj = []
+for i in range(0,matrix_l):
+  arr = []
+  for j in range(0,matrix_l):
+    arr.append("")
+  adj.append(arr)
+
+
+edges = list_of_edges.keys()
+print(edges)
+
+for edge_id in edges:
+  start = traci.edge.getFromJunction(edge_id)
+  end = traci.edge.getToJunction(edge_id)
+
+  if start!=end:
+      adj[list_of_junctions[start]][list_of_junctions[end]] = edge_id
+      # adj[list_of_junctions[end]][list_of_junctions[start]] = edge_id
+
+
+def random_route(index,parent,adj,route):
+  print(route)
+  if(len(route)>=10):
+    return None
+  # index = list_of_junctions[junction]
+  list = adj[index]
+  next_edges =[]
+  for i in list:
+    if i!="" and i!=list[parent]:
+      next_edges.append(i)
+  if len(next_edges)==0:
+    return None
+  if len(next_edges)!=0:
+    choice = random.choice(next_edges)
+    ind = list.index(choice)
+    route.append(choice)
+    print(index)
+    parent = index
+    route = random_route(ind,parent,adj,route)
+
+  return None
+
+rout = []
+for i in range(200):
+  temp = []
+  random_route(0,-1,adj,temp)
+  rout.append(temp)
+
+new_rout = []
+for i in range(200):
+  temp = []
+  random_route(5,-1,adj,temp)
+  new_rout.append(temp)
+
+new2_rout = []
+for i in range(200):
+  temp = []
+  random_route(9,-1,adj,temp)
+  new2_rout.append(temp)
+
+##############################################################################
+############KAUSTABH KA COMMAND###############################################
 
 avg_distance = 0.0
 angle_weights = np.array([0, 0.3, 3, 5])
 angles = np.array([10, 50, 150, 180])
-
-sumoBinary = sumolib.checkBinary('sumo-gui')
-
-sumo_cfg = "random_sumo.sumocfg"
-traci.start([sumoBinary, "-c", sumo_cfg])
 
 def getWeight(start, end):
   start_x, start_y = traci.junction.getPosition(start)
@@ -93,31 +184,42 @@ print("My path: ", path)
 
 traci.route.add("kaustabh", path)
 traci.vehicle.add(vehID="patel", routeID="kaustabh")
+traci.vehicle.setColor("patel", color=(255, 0, 0, 255))
 steps = []
 speeds = []
-i = 0
-while i < 1000:
+step = 0
+while step < 1000:
   traci.simulationStep()
+
+  if step % 2 == 0 and step < 400:
+    id = "rout" + str(step//2)
+    traci.route.add(id,rout[step//2])
+    traci.vehicle.add(vehID=id, routeID=id)
+
+    id = "kau" + str(step//2)
+    traci.route.add(id,new_rout[step//2])
+    traci.vehicle.add(vehID=id, routeID=id)
+
+    id = "harshit" + str(step//2)
+    traci.route.add(id,new2_rout[step//2])
+    traci.vehicle.add(vehID=id, routeID=id)
+
+
+
+
+  if step % 100 == 0:
+    list_of_vehicles = traci.vehicle.getIDList()
+    print(list_of_vehicles)
+    print("Step: ", step)
+
+
 
   if "patel" in traci.vehicle.getIDList():
     speed = traci.vehicle.getSpeed("patel")
     speeds += [speed]
-    steps += [i]
+    steps += [step]
 
-#   for vehicle_id in traci.vehicle.getIDList():
-#     speed = traci.vehicle.getSpeed(vehicle_id)
-#     print(f"Step: {step}, VehicleID: {vehicle_id}, Speed: {speed}")
-
-#   for traffic_light_id in traci.trafficlight.getIDList():
-#     if step < 20:
-#       traci.trafficlight.setRedYellowGreenState(traffic_light_id, 'r')
-#     else:
-#       traci.trafficlight.setRedYellowGreenState(traffic_light_id, 'G')
-#     print(f"Step: {step}, VehicleID: {vehicle_id}")
-
-#   print("==========================")
-
-  i += 1
+  step += 1
 
 traci.close()
 
