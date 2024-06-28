@@ -5,7 +5,6 @@ import numpy as np
 import sys
 from dijkstra_angle import Dijkstra
 import matplotlib.pyplot as plt
-import numpy as np
 import random
 
 ##############################################################################
